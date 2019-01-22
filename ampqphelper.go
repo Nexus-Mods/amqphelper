@@ -34,8 +34,6 @@ func CreateProducer() Producer {
 
 	connection, err = amqp.Dial(queueConn)
 	failOnError(err, "Failed to connect to RabbitMQ")
-	defer connection.Close()
-
 
 	channel, err = connection.Channel()
 	failOnError(err, "Failed to create/connect to Channel")
