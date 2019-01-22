@@ -28,19 +28,19 @@ func CreateProducer() Producer {
 	exchangeInternal := GetenvBool("AMQP_EXCHANGE_INTERNAL")
 	exchangeNoWait := GetenvBool("AMQP_EXCHANGE_NO_WAIT")
 
-	p := Producer{}
-
 	var err error
+	var channel *amqp.Channel
+	var connection *amqp.Connection
 
-	p.Connection, err = amqp.Dial(queueConn)
+	connection, err = amqp.Dial(queueConn)
 	failOnError(err, "Failed to connect to RabbitMQ")
-	defer p.Connection.Close()
+	defer connection.Close()
 
 
-	p.Channel, err = p.Connection.Channel()
+	channel, err = connection.Channel()
 	failOnError(err, "Failed to create/connect to Channel")
 
-	err = p.Channel.ExchangeDeclare(
+	err = channel.ExchangeDeclare(
 		exchangeName,     // name
 		exchangeType, // type
 		exchangeDurable,         // durable
@@ -49,6 +49,10 @@ func CreateProducer() Producer {
 		exchangeNoWait,        // noWait
 		nil,          // arguments
 	)
+
+	failOnError(err, "Failed to create exchange")
+
+	p := Producer{Channel: channel, Connection: connection}
 
 	return p
 }
