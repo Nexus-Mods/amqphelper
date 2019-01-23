@@ -18,9 +18,25 @@ type Producer struct {
 	Channel *amqp.Channel
 }
 
+var conn *amqp.Connection
+
+func connect() *amqp.Connection {
+	if conn == nil {
+		queueConn := GetenvStr("AMQP_CONNECTION")
+
+		var err error
+		conn, err = amqp.Dial(queueConn)
+		failOnError(err, "Failed to connect to RabbitMQ")
+	}
+
+
+	return conn
+}
+
 func CreateProducer() Producer {
 
-	queueConn := GetenvStr("AMQP_CONNECTION")
+	connect()
+
 	exchangeName := GetenvStr("AMQP_EXCHANGE_NAME")
 	exchangeType := GetenvStr("AMQP_EXCHANGE_TYPE")
 	exchangeDurable := GetenvBool("AMQP_EXCHANGE_DURABLE")
@@ -30,12 +46,8 @@ func CreateProducer() Producer {
 
 	var err error
 	var channel *amqp.Channel
-	var connection *amqp.Connection
 
-	connection, err = amqp.Dial(queueConn)
-	failOnError(err, "Failed to connect to RabbitMQ")
-
-	channel, err = connection.Channel()
+	channel, err = conn.Channel()
 	failOnError(err, "Failed to create/connect to Channel")
 
 	err = channel.ExchangeDeclare(
@@ -50,13 +62,16 @@ func CreateProducer() Producer {
 
 	failOnError(err, "Failed to create exchange")
 
-	p := Producer{Channel: channel, Connection: connection}
+	p := Producer{Channel: channel, Connection: conn}
 
 	return p
 }
 
 func StartConsumer(consumerCallback func(event amqp.Delivery)) {
-	queueConn := GetenvStr("AMQP_CONNECTION")
+	connect()
+
+	defer conn.Close()
+
 	queueName := GetenvStr("AMQP_QUEUE")
 	queueDurable := GetenvBool("AMQP_QUEUE_DURABLE")
 	queueDelete := GetenvBool("AMQP_QUEUE_DELETE")
@@ -67,10 +82,6 @@ func StartConsumer(consumerCallback func(event amqp.Delivery)) {
 	queueConsumerExclusive := GetenvBool("AMQP_CONSUMER_EXCLUSIVE")
 	queueConsumerNoLocal := GetenvBool("AMQP_CONSUMER_NO_LOCAL")
 	queueConsumerNoWait := GetenvBool("AMQP_CONSUMER_NO_WAIT")
-
-	conn, err := amqp.Dial(queueConn)
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
 
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
