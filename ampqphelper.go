@@ -50,17 +50,19 @@ func CreateProducer() Producer {
 	channel, err = conn.Channel()
 	failOnError(err, "Failed to create/connect to Channel")
 
-	err = channel.ExchangeDeclare(
-		exchangeName,     // name
-		exchangeType, // type
-		exchangeDurable,         // durable
-		exchangeAutoDelete,        // auto-deleted
-		exchangeInternal,        // internal
-		exchangeNoWait,        // noWait
-		nil,          // arguments
-	)
+	if exchangeName != "" {
+		err = channel.ExchangeDeclare(
+			exchangeName,       // name
+			exchangeType,       // type
+			exchangeDurable,    // durable
+			exchangeAutoDelete, // auto-deleted
+			exchangeInternal,   // internal
+			exchangeNoWait,     // noWait
+			nil,                // arguments
+		)
 
-	failOnError(err, "Failed to create exchange")
+		failOnError(err, "Failed to create exchange")
+	}
 
 	p := Producer{Channel: channel, Connection: conn}
 
