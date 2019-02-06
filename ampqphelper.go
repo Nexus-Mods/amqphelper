@@ -56,7 +56,7 @@ func CreateQueueAndBind(
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
+	_, err = ch.QueueDeclare(
 		queueName,      // name
 		queueDurable,   // durable
 		queueDelete,    // delete when unused
