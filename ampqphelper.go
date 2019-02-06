@@ -33,8 +33,60 @@ func connect() *amqp.Connection {
 	return conn
 }
 
-func CreateProducer() Producer {
+/**
+ * Creates the queue, and binds the queue the specified exchange
+ */
+func CreateQueueAndBind(
+		bindingKey string,
+		exchangeName string,
+		exchangeType string,
+		exchangeDurable bool,
+		exchangeAutoDelete bool,
+		exchangeInternal bool,
+		exchangeNoWait bool) {
+	connect()
 
+	queueName := GetenvStr("AMQP_QUEUE")
+	queueDurable := GetenvBool("AMQP_QUEUE_DURABLE")
+	queueDelete := GetenvBool("AMQP_QUEUE_DELETE")
+	queueExclusive := GetenvBool("AMQP_QUEUE_EXCLUSIVE")
+	queueNoWait := GetenvBool("AMQP_QUEUE_NO_WAIT")
+
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
+
+	q, err := ch.QueueDeclare(
+		queueName,      // name
+		queueDurable,   // durable
+		queueDelete,    // delete when unused
+		queueExclusive, // exclusive
+		queueNoWait,    // no-wait
+		nil,            // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
+
+	err = ch.ExchangeDeclare(
+		exchangeName,       // name
+		exchangeType,       // type
+		exchangeDurable,    // durable
+		exchangeAutoDelete, // auto-deleted
+		exchangeInternal,   // internal
+		exchangeNoWait,     // noWait
+		nil,                // arguments
+	)
+	failOnError(err, "Failed to declare an exchange")
+
+	err = ch.QueueBind(
+		queueName, // queue name
+		bindingKey,     // routing key
+		exchangeName, // exchange
+		exchangeNoWait,
+		nil)
+	failOnError(err, "Failed to declare the queue binding")
+}
+
+func CreateProducer() Producer {
 	connect()
 
 	exchangeName := GetenvStr("AMQP_EXCHANGE_NAME")
@@ -75,10 +127,6 @@ func StartConsumer(consumerCallback func(event amqp.Delivery)) {
 	defer conn.Close()
 
 	queueName := GetenvStr("AMQP_QUEUE")
-	queueDurable := GetenvBool("AMQP_QUEUE_DURABLE")
-	queueDelete := GetenvBool("AMQP_QUEUE_DELETE")
-	queueExclusive := GetenvBool("AMQP_QUEUE_EXCLUSIVE")
-	queueNoWait := GetenvBool("AMQP_QUEUE_NO_WAIT")
 	queueConsumerName := GetenvStr("AMQP_CONSUMER_NAME")
 	queueConsumerAutoAck := GetenvBool("AMQP_CONSUMER_AUTO_ACK")
 	queueConsumerExclusive := GetenvBool("AMQP_CONSUMER_EXCLUSIVE")
@@ -89,18 +137,8 @@ func StartConsumer(consumerCallback func(event amqp.Delivery)) {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
-		queueName,      // name
-		queueDurable,   // durable
-		queueDelete,    // delete when unused
-		queueExclusive, // exclusive
-		queueNoWait,    // no-wait
-		nil,            // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
 	msgs, err := ch.Consume(
-		q.Name,                 // queue
+		queueName,                 // queue
 		queueConsumerName,      // consumer
 		queueConsumerAutoAck,   // auto-ack
 		queueConsumerExclusive, // exclusive
