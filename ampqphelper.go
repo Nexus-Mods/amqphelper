@@ -163,3 +163,14 @@ func StartConsumer(consumerCallback func(event amqp.Delivery)) {
 	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
 }
+
+func GetChannel() *amqp.Channel {
+	connect()
+
+	var channel *amqp.Channel
+
+	channel, err := conn.Channel()
+	failOnError(err, "Failed to create/connect to Channel")
+
+	return channel
+}
