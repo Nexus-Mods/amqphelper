@@ -69,7 +69,7 @@ func CreateQueueAndBind(
 	err = ch.ExchangeDeclare(
 		exchangeName,       // name
 		exchangeType,       // type
-		exchangeDurable,    // durable
+		true,    // durable
 		exchangeAutoDelete, // auto-deleted
 		exchangeInternal,   // internal
 		exchangeNoWait,     // noWait
